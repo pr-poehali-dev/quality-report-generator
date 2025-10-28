@@ -5,10 +5,12 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 interface WeldConnection {
   id: string;
@@ -52,6 +54,7 @@ interface FormData {
 export default function Index() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('header');
+  const [showPreview, setShowPreview] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     labName: 'ЛККСС',
     certificate: '',
@@ -266,10 +269,106 @@ export default function Index() {
         title: 'Документ сгенерирован',
         description: 'PDF успешно создан и загружен',
       });
+      setShowPreview(false);
     } catch (error) {
       toast({
         title: 'Ошибка',
         description: 'Не удалось создать документ',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const generateExcel = () => {
+    try {
+      const wb = XLSX.utils.book_new();
+
+      const wsData: any[][] = [];
+
+      wsData.push(['Наименование лаборатории НК:', formData.labName]);
+      wsData.push(['Свидетельство об аттестации:', formData.certificate]);
+      wsData.push(['Нормативный документ:', formData.normDoc]);
+      wsData.push(['Номер ОТК НК:', `ТК-РК-${formData.otkNumber}`]);
+      wsData.push(['Источник ионизирующего излучения:', formData.radiationSource]);
+      wsData.push(['Тип детектора:', formData.detector]);
+      wsData.push(['Тип защитного экрана:', formData.protectiveScreen]);
+      wsData.push(['Тип усиливающего:', formData.amplifier]);
+      wsData.push(['Заключение по ВИК№:', `${formData.vikNumber} от ${formData.vikDate}`]);
+      wsData.push([]);
+
+      wsData.push([`ЗАКЛЮЧЕНИЕ № ${formData.conclusionNumber}-ПА`]);
+      wsData.push([`от ${new Date(formData.conclusionDate).toLocaleDateString('ru-RU')} года`]);
+      wsData.push(['по результатам контроля качества сварных соединений']);
+      wsData.push(['радиационным неразрушающим методом (РК)']);
+      wsData.push([]);
+
+      wsData.push(['Наименование объекта:', formData.objectName]);
+      wsData.push(['Уровень качества:', formData.qualityLevel]);
+      wsData.push(['Объем контроля:', `${formData.controlVolume}%`]);
+      wsData.push(['Название трассы:', formData.routeName]);
+      wsData.push(['Участок трубопровода, километраж:', formData.pipelineSection]);
+      wsData.push(['Наименование орг. подрядчика:', formData.contractor]);
+      wsData.push(['Наименование орг. заказчика:', formData.customer]);
+      wsData.push(['Шифр бригады или клеймо сварщика:', formData.welderMark]);
+      wsData.push([]);
+
+      wsData.push(['РЕЗУЛЬТАТЫ КОНТРОЛЯ']);
+      wsData.push([
+        '№ соединения',
+        'Диаметр x толщина',
+        '№ участка',
+        'Чувствительность',
+        'Координаты дефектов',
+        'Описание дефектов',
+        'Заключение',
+        'Примечания',
+      ]);
+
+      connections.forEach(conn => {
+        wsData.push([
+          conn.number,
+          conn.diameter,
+          conn.section,
+          conn.sensitivity,
+          conn.coordinates,
+          conn.defects,
+          conn.conclusion,
+          conn.notes,
+        ]);
+      });
+
+      wsData.push([]);
+      wsData.push(['Контроль провёл:', formData.controllerName]);
+      wsData.push([`${formData.controllerLevel} ур., удост. №`, formData.controllerCertificate]);
+      wsData.push(['Дата:', new Date(formData.controlDate).toLocaleDateString('ru-RU')]);
+
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+      const colWidths = [
+        { wch: 30 },
+        { wch: 25 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 20 },
+        { wch: 30 },
+        { wch: 15 },
+        { wch: 20 },
+      ];
+      ws['!cols'] = colWidths;
+
+      XLSX.utils.book_append_sheet(wb, ws, 'Заключение РК');
+
+      XLSX.writeFile(wb, `Заключение_РК_${formData.conclusionNumber}_${new Date().toLocaleDateString('ru-RU')}.xlsx`);
+
+      toast({
+        title: 'Excel создан',
+        description: 'Файл успешно экспортирован',
+      });
+      setShowPreview(false);
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось создать Excel файл',
         variant: 'destructive',
       });
     }
@@ -294,9 +393,9 @@ export default function Index() {
             <Icon name="FolderOpen" size={16} />
             Загрузить шаблон
           </Button>
-          <Button onClick={generateDocument} className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+          <Button onClick={() => setShowPreview(true)} className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
             <Icon name="FileText" size={16} />
-            Сгенерировать документ
+            Предпросмотр и экспорт
           </Button>
         </div>
 
@@ -716,6 +815,105 @@ export default function Index() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        <Dialog open={showPreview} onOpenChange={setShowPreview}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Предпросмотр документа
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4 p-6 bg-white rounded-lg border-2 border-gray-200">
+              <div className="text-xs space-y-1 border-b pb-4">
+                <p><strong>Наименование лаборатории НК:</strong> {formData.labName}</p>
+                <p><strong>Свидетельство об аттестации:</strong> № {formData.certificate}</p>
+                <p><strong>Нормативный документ:</strong> {formData.normDoc}</p>
+                <p><strong>Номер ОТК НК:</strong> ТК-РК-{formData.otkNumber}</p>
+                <p><strong>Источник ионизирующего излучения:</strong> {formData.radiationSource}</p>
+                <p><strong>Тип детектора:</strong> {formData.detector}</p>
+                <p><strong>Тип защитного экрана:</strong> {formData.protectiveScreen}</p>
+                <p><strong>Тип усиливающего:</strong> {formData.amplifier}</p>
+                <p><strong>Заключение по ВИК№:</strong> {formData.vikNumber} от {formData.vikDate}</p>
+              </div>
+
+              <div className="text-center py-4 border-b">
+                <h2 className="text-lg font-bold">ЗАКЛЮЧЕНИЕ № {formData.conclusionNumber}-ПА</h2>
+                <p className="text-sm">от {new Date(formData.conclusionDate).toLocaleDateString('ru-RU')} года</p>
+                <p className="text-sm mt-2">по результатам контроля качества сварных соединений</p>
+                <p className="text-sm">радиационным неразрушающим методом (РК)</p>
+              </div>
+
+              <div className="text-xs space-y-1 border-b pb-4">
+                <p><strong>Наименование объекта:</strong> {formData.objectName}</p>
+                <p><strong>Уровень качества:</strong> «{formData.qualityLevel}»</p>
+                <p><strong>Объем контроля:</strong> {formData.controlVolume}%</p>
+                <p><strong>Название трассы:</strong> {formData.routeName}</p>
+                <p><strong>Участок трубопровода, километраж:</strong> {formData.pipelineSection}</p>
+                <p><strong>Наименование орг. подрядчика:</strong> {formData.contractor}</p>
+                <p><strong>Наименование орг. заказчика:</strong> {formData.customer}</p>
+                <p><strong>Шифр бригады или клеймо сварщика:</strong> {formData.welderMark}</p>
+              </div>
+
+              <div>
+                <h3 className="font-bold text-center mb-3">РЕЗУЛЬТАТЫ КОНТРОЛЯ</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs border-collapse border border-gray-300">
+                    <thead className="bg-purple-100">
+                      <tr>
+                        <th className="border border-gray-300 p-2">№ соед.</th>
+                        <th className="border border-gray-300 p-2">Диаметр x толщина</th>
+                        <th className="border border-gray-300 p-2">№ участка</th>
+                        <th className="border border-gray-300 p-2">Чувств.</th>
+                        <th className="border border-gray-300 p-2">Координаты</th>
+                        <th className="border border-gray-300 p-2">Описание дефектов</th>
+                        <th className="border border-gray-300 p-2">Заключение</th>
+                        <th className="border border-gray-300 p-2">Примечания</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {connections.map((conn) => (
+                        <tr key={conn.id}>
+                          <td className="border border-gray-300 p-2 text-center">{conn.number}</td>
+                          <td className="border border-gray-300 p-2 text-center">{conn.diameter}</td>
+                          <td className="border border-gray-300 p-2 text-center">{conn.section}</td>
+                          <td className="border border-gray-300 p-2 text-center">{conn.sensitivity}</td>
+                          <td className="border border-gray-300 p-2">{conn.coordinates}</td>
+                          <td className="border border-gray-300 p-2">{conn.defects}</td>
+                          <td className={`border border-gray-300 p-2 text-center font-semibold ${
+                            conn.conclusion === 'годен' ? 'text-green-600' : 
+                            conn.conclusion === 'ремонт' ? 'text-orange-600' : 'text-red-600'
+                          }`}>{conn.conclusion}</td>
+                          <td className="border border-gray-300 p-2">{conn.notes}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="text-xs border-t pt-4">
+                <p><strong>Контроль провёл:</strong> {formData.controllerName}</p>
+                <p>{formData.controllerLevel} ур., удост. № {formData.controllerCertificate}</p>
+                <p><strong>Дата:</strong> {new Date(formData.controlDate).toLocaleDateString('ru-RU')}</p>
+              </div>
+            </div>
+
+            <div className="flex gap-4 justify-center pt-4">
+              <Button onClick={generateDocument} className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600">
+                <Icon name="FileDown" size={16} />
+                Скачать PDF
+              </Button>
+              <Button onClick={generateExcel} className="gap-2 bg-gradient-to-r from-green-600 to-emerald-600">
+                <Icon name="Sheet" size={16} />
+                Скачать Excel
+              </Button>
+              <Button onClick={() => setShowPreview(false)} variant="outline">
+                Закрыть
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
