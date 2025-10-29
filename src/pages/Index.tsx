@@ -10,6 +10,7 @@ import ConnectionsForm from '@/components/welding/ConnectionsForm';
 import SignatureForm from '@/components/welding/SignatureForm';
 import PreviewDialog from '@/components/welding/PreviewDialog';
 import { generatePDF, generateExcelFile } from '@/components/welding/documentGenerators';
+import { generateWordDocument } from '@/components/welding/wordGenerator';
 
 export default function Index() {
   const { toast } = useToast();
@@ -151,6 +152,23 @@ export default function Index() {
     }
   };
 
+  const generateWord = async () => {
+    try {
+      await generateWordDocument(formData, connections);
+      toast({
+        title: 'Word документ создан',
+        description: 'Файл успешно экспортирован',
+      });
+      setShowPreview(false);
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось создать Word файл',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 py-8 px-4">
       <div className="max-w-7xl mx-auto">
@@ -225,6 +243,7 @@ export default function Index() {
           connections={connections}
           generateDocument={generateDocument}
           generateExcel={generateExcel}
+          generateWord={generateWord}
         />
       </div>
     </div>

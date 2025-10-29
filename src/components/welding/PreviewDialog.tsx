@@ -10,6 +10,7 @@ interface PreviewDialogProps {
   connections: WeldConnection[];
   generateDocument: () => void;
   generateExcel: () => void;
+  generateWord: () => void;
 }
 
 export default function PreviewDialog({ 
@@ -18,7 +19,8 @@ export default function PreviewDialog({
   formData, 
   connections, 
   generateDocument, 
-  generateExcel 
+  generateExcel,
+  generateWord
 }: PreviewDialogProps) {
   return (
     <Dialog open={showPreview} onOpenChange={setShowPreview}>
@@ -104,10 +106,14 @@ export default function PreviewDialog({
           </div>
         </div>
 
-        <div className="flex gap-4 justify-center pt-4">
+        <div className="flex gap-3 justify-center pt-4 flex-wrap">
           <Button onClick={generateDocument} className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600">
             <Icon name="FileDown" size={16} />
             Скачать PDF
+          </Button>
+          <Button onClick={generateWord} className="gap-2 bg-gradient-to-r from-indigo-600 to-blue-600">
+            <Icon name="FileText" size={16} />
+            Скачать Word
           </Button>
           <Button onClick={generateExcel} className="gap-2 bg-gradient-to-r from-green-600 to-emerald-600">
             <Icon name="Sheet" size={16} />
