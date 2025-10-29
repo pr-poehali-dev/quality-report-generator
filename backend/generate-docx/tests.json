@@ -1,0 +1,21 @@
+{
+  "tests": [
+    {
+      "name": "Test missing template error",
+      "method": "POST",
+      "body": {
+        "data": {}
+      },
+      "expectedStatus": 400,
+      "expectedBody": {
+        "error": "Template file required in base64 format"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Test OPTIONS CORS handling",
+      "method": "OPTIONS",
+      "expectedStatus": 200
+    }
+  ]
+}
