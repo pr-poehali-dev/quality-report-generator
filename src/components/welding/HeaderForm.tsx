@@ -47,22 +47,33 @@ export default function HeaderForm({ formData, updateFormData }: HeaderFormProps
           />
         </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="otkNumber">Номер ОТК НК (ТК-РК-)</Label>
+          <Input 
+            id="otkNumber" 
+            placeholder="введите номер"
+            value={formData.otkNumber}
+            onChange={(e) => updateFormData('otkNumber', e.target.value)}
+          />
+        </div>
+
         <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="otkNumber">Номер ОТК НК (ТК-РК-)</Label>
-            <Input 
-              id="otkNumber" 
-              placeholder="введите номер"
-              value={formData.otkNumber}
-              onChange={(e) => updateFormData('otkNumber', e.target.value)}
-            />
-          </div>
           <div className="space-y-2">
             <Label htmlFor="vikNumber">Заключение по ВИК №</Label>
             <Input 
               id="vikNumber" 
+              placeholder="номер заключения"
               value={formData.vikNumber}
               onChange={(e) => updateFormData('vikNumber', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="vikDate">Дата заключения ВИК</Label>
+            <Input 
+              id="vikDate" 
+              type="date"
+              value={formData.vikDate}
+              onChange={(e) => updateFormData('vikDate', e.target.value)}
             />
           </div>
         </div>
