@@ -4,7 +4,7 @@
       "name": "Test missing template error",
       "method": "POST",
       "body": {
-        "data": {}
+        "replacements": {}
       },
       "expectedStatus": 400,
       "expectedBody": {

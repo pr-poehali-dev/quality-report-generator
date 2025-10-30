@@ -293,7 +293,7 @@ export async function generateWordDocument(formData: FormData, connections: Weld
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         template: TEMPLATE_BASE64,
-        data: dataForTemplate,
+        replacements: dataForTemplate,
       }),
     });
 
