@@ -2,7 +2,7 @@ import json
 import base64
 from typing import Dict, Any
 from docx import Document
-from docx.shared import Pt, Inches, RGBColor
+from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
@@ -30,7 +30,7 @@ def add_table_borders(table):
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     '''
-    Business: Creates Word document with welding control data in standard format
+    Business: Creates Word document with welding control data matching template format
     Args: event - dict with httpMethod, body containing formData and connections
           context - object with request_id attribute
     Returns: HTTP response with base64-encoded .docx file
@@ -61,22 +61,53 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     form_data = body_data.get('formData', {})
     connections = body_data.get('connections', [])
     
+    ctx = {
+        'conclusion_number': form_data.get('conclusionNumber', ''),
+        'conclusion_date': form_data.get('conclusionDate', ''),
+        'lab_name': form_data.get('labName', 'ЛККСС'),
+        'cert_number': form_data.get('certificate', ''),
+        'standard': form_data.get('normDoc', 'СТО Газпром 15-1.3-004-2023'),
+        'ndt_numbers': form_data.get('otkNumber', ''),
+        'radiation_source': form_data.get('radiationSource', 'Рентген аппарат МАРТ-200 (U=105÷200кВ,I=0,5мА, фокусное пятно 2,2 мм)'),
+        'detector_type': form_data.get('detectorType', 'радиографическая пленка РТ-1; РТ-7Т'),
+        'protective_screen': form_data.get('protectiveScreen', 'Pb'),
+        'intensifying_screen': form_data.get('intensifyingScreen', 'RCF; SMP; Pb'),
+        'vik_conclusion': form_data.get('vikConclusion', ''),
+        'object_name': form_data.get('objectName', ''),
+        'quality_level': form_data.get('qualityLevel', 'В'),
+        'inspection_volume': form_data.get('controlVolume', '100'),
+        'route_name': form_data.get('routeName', ''),
+        'pipeline_section': form_data.get('pipelineSection', '-'),
+        'contractor': form_data.get('contractor', ''),
+        'customer': form_data.get('customer', ''),
+        'welder_marks': form_data.get('welderCode', ''),
+        'inspector_name': form_data.get('controllerName', ''),
+        'inspector_level': form_data.get('controllerLevel', ''),
+        'inspector_cert': form_data.get('controllerCertificate', ''),
+        'inspector_date': form_data.get('controlDate', ''),
+        'issuer_name': form_data.get('issuerName', form_data.get('controllerName', '')),
+        'issuer_level': form_data.get('issuerLevel', form_data.get('controllerLevel', '')),
+        'issuer_cert': form_data.get('issuerCertificate', form_data.get('controllerCertificate', '')),
+        'issuer_date': form_data.get('issueDate', form_data.get('controlDate', '')),
+        'final_conclusion': form_data.get('finalConclusion', 'годен')
+    }
+    
     doc = Document()
     
     p = doc.add_paragraph()
-    run = p.add_run(f"Наименование лаборатории:             {form_data.get('labName', 'ЛККСС')}")
+    run = p.add_run(f"Наименование лаборатории:             {ctx['lab_name']}")
     run.font.size = Pt(11)
     
     p = doc.add_paragraph()
-    run = p.add_run(f"Свидетельство об аттестации:          {form_data.get('certificate', '')}")
+    run = p.add_run(f"Свидетельство об аттестации:          {ctx['cert_number']}")
     run.font.size = Pt(11)
     
     p = doc.add_paragraph()
-    run = p.add_run(f"Нормативный документ:                   {form_data.get('normDoc', 'СТО Газпром 15-1.3-004-2023')}")
+    run = p.add_run(f"Нормативный документ:                   {ctx['standard']}")
     run.font.size = Pt(11)
     
     p = doc.add_paragraph()
-    run = p.add_run(f"Номер ОТК НК:                                  {form_data.get('otkNumber', '')}")
+    run = p.add_run(f"Номер ОТК НК:                                  {ctx['ndt_numbers']}")
     run.font.size = Pt(11)
     
     table = doc.add_table(rows=4, cols=2)
@@ -85,47 +116,47 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     table.cell(0, 0).text = 'Средства контроля'
     table.cell(0, 0).merge(table.cell(3, 0))
     
-    table.cell(0, 1).text = 'Источник ионизирующего излучения'
-    table.cell(1, 1).text = 'Тип детектора'
-    table.cell(2, 1).text = 'Тип защитного экрана'
-    table.cell(3, 1).text = 'Тип усиливающего экрана'
+    table.cell(0, 1).text = f"Источник ионизирующего излучения\t{ctx['radiation_source']}"
+    table.cell(1, 1).text = f"Тип детектора\t{ctx['detector_type']}"
+    table.cell(2, 1).text = f"Тип защитного экрана\t{ctx['protective_screen']}"
+    table.cell(3, 1).text = f"Тип усиливающего экрана\t{ctx['intensifying_screen']}"
     
     doc.add_paragraph()
     
     p = doc.add_paragraph()
-    run = p.add_run(f"Заключение по ВИК: № {form_data.get('vikNumber', '')}     от  {form_data.get('vikDate', '')} г.")
+    run = p.add_run(f"Заключение по ВИК: {ctx['vik_conclusion']}")
     run.font.size = Pt(11)
     
     p = doc.add_paragraph()
-    run = p.add_run(f"Наименование объекта: {form_data.get('objectName', '')}")
+    run = p.add_run(f"Наименование объекта: {ctx['object_name']}")
     run.font.size = Pt(11)
     
     p = doc.add_paragraph()
-    run = p.add_run(f"Уровень качества:                           {form_data.get('qualityLevel', 'В')}")
+    run = p.add_run(f"Уровень качества:                           {ctx['quality_level']}")
     run.font.size = Pt(11)
     
     p = doc.add_paragraph()
-    run = p.add_run(f"Объём контроля:                               {form_data.get('controlVolume', '100')}")
+    run = p.add_run(f"Объём контроля:                               {ctx['inspection_volume']}")
     run.font.size = Pt(11)
     
     p = doc.add_paragraph()
-    run = p.add_run(f"Название трассы: {form_data.get('routeName', '')}")
+    run = p.add_run(f"Название трассы: {ctx['route_name']}")
     run.font.size = Pt(11)
     
     p = doc.add_paragraph()
-    run = p.add_run(f"Участок труб-да, километраж:       {form_data.get('pipelineSection', '-')}")
+    run = p.add_run(f"Участок труб-да, километраж:       {ctx['pipeline_section']}")
     run.font.size = Pt(11)
     
     p = doc.add_paragraph()
-    run = p.add_run(f"Наименование орг. подрядчика:    {form_data.get('contractor', '')}")
+    run = p.add_run(f"Наименование орг. подрядчика:    {ctx['contractor']}")
     run.font.size = Pt(11)
     
     p = doc.add_paragraph()
-    run = p.add_run(f"Наименование орг. заказчика:       {form_data.get('customer', '')}")
+    run = p.add_run(f"Наименование орг. заказчика:       {ctx['customer']}")
     run.font.size = Pt(11)
     
     p = doc.add_paragraph()
-    run = p.add_run(f"Шифр бригады или клеймо сварщика: {form_data.get('welderCode', '')}")
+    run = p.add_run(f"Шифр бригады или клеймо сварщика: {ctx['welder_marks']}")
     run.font.size = Pt(11)
     
     doc.add_paragraph()
@@ -133,13 +164,13 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     
     title = doc.add_paragraph()
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = title.add_run(f"ЗАКЛЮЧЕНИЕ № {form_data.get('conclusionNumber', '')}")
+    run = title.add_run(f"ЗАКЛЮЧЕНИЕ № {ctx['conclusion_number']}")
     run.bold = True
     run.font.size = Pt(12)
     
     subtitle = doc.add_paragraph()
     subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = subtitle.add_run(f"от «{form_data.get('conclusionDate', '')}»")
+    run = subtitle.add_run(f"от «{ctx['conclusion_date']}»")
     run.font.size = Pt(11)
     
     desc = doc.add_paragraph()
@@ -198,7 +229,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     doc.add_paragraph()
     
     p = doc.add_paragraph()
-    run = p.add_run(f"Заключение о качестве сварного соединения:   {form_data.get('finalConclusion', 'годен')}")
+    run = p.add_run(f"Заключение о качестве сварного соединения:   {ctx['final_conclusion']}")
     run.font.size = Pt(11)
     p = doc.add_paragraph()
     run = p.add_run('                                                                              (годен, ремонт, вырезать)')
@@ -213,16 +244,16 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     add_table_borders(info_table)
     
     info_table.cell(0, 0).text = 'Контроль провел'
-    info_table.cell(0, 1).text = f"Ф.И.О.                {form_data.get('controllerName', '')}"
-    info_table.cell(0, 2).text = f"Уровень квал.:   {form_data.get('controllerLevel', '')}  ,     № удост.: {form_data.get('controllerCertificate', '')}"
+    info_table.cell(0, 1).text = f"Ф.И.О.                {ctx['inspector_name']}"
+    info_table.cell(0, 2).text = f"Уровень квал.:   {ctx['inspector_level']}  ,     № удост.: {ctx['inspector_cert']}"
     info_table.cell(0, 3).text = 'Подпись:'
-    info_table.cell(0, 4).text = f"Дата:      {form_data.get('controlDate', '')}"
+    info_table.cell(0, 4).text = f"Дата:      {ctx['inspector_date']}"
     
     info_table.cell(1, 0).text = 'Заключение выдал'
-    info_table.cell(1, 1).text = f"Ф.И.О.                {form_data.get('issuerName', form_data.get('controllerName', ''))}"
-    info_table.cell(1, 2).text = f"Уровень квал.:   {form_data.get('issuerLevel', form_data.get('controllerLevel', ''))}  ,     № удост.: {form_data.get('issuerCertificate', form_data.get('controllerCertificate', ''))}"
+    info_table.cell(1, 1).text = f"Ф.И.О.                {ctx['issuer_name']}"
+    info_table.cell(1, 2).text = f"Уровень квал.:   {ctx['issuer_level']}  ,     № удост.: {ctx['issuer_cert']}"
     info_table.cell(1, 3).text = 'Подпись:'
-    info_table.cell(1, 4).text = f"Дата:      {form_data.get('issueDate', form_data.get('controlDate', ''))}"
+    info_table.cell(1, 4).text = f"Дата:      {ctx['issuer_date']}"
     
     for row in info_table.rows:
         for cell in row.cells:
@@ -245,6 +276,6 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         'isBase64Encoded': False,
         'body': json.dumps({
             'file': result_base64,
-            'filename': f"zaklyuchenie_{form_data.get('conclusionNumber', 'rk')}.docx"
+            'filename': f"zaklyuchenie_{ctx['conclusion_number'].replace('/', '_')}.docx"
         })
     }
